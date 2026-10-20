@@ -42,19 +42,22 @@ This is a **single-brand, single-seller** platform — not a multi-vendor market
 - Checkout: select/add delivery address, place order
 - Payment: Paystack checkout (primary path)
 - Manual payment path: customer pays to a business MoMo number and awaits admin confirmation (order stays `pending` until confirmed)
+- Unpaid orders are cancelled automatically after a payment deadline (30 minutes for Paystack, 24 hours for manual MoMo) so their stock goes back on sale
 - Order history and status view (`pending` → `paid` → `processing` → `shipped` → `delivered`)
 - Return request: within 14 days of delivery, optional reason, tracked through to refund or rejection
-- Account: sign up, sign in, session persistence
+- Account: sign up, sign in, sign out, session persistence, password reset by email, edit name/phone, manage saved delivery addresses
+- Guest cart: add to cart without an account; the cart carries over when the customer signs in at checkout
 
 ### 5.2 Admin dashboard (web)
 - Auth: same login system as customers, gated by `role: admin`
-- Product management: create, edit, (soft-)deactivate products and variants
+- Product management: create, edit, (soft-)deactivate products and variants, upload product images
 - Inventory management: view and update stock per variant, low-stock visibility
 - Order management: view all orders, update status, mark manual payments as paid, cancel orders (with automatic inventory restoration)
 - Delivery status updates: manually advance an order's delivery sub-status (`requested → assigned → picked_up → en_route → delivered`) until a real courier API is integrated
-- Returns management: view requests, approve/reject with reason, mark received, confirm inspection, trigger refund
-- Notifications: in-dashboard list of new orders, return requests, and delivery failures, markable as read
-- Sales dashboard: total orders, total revenue, orders by status
+- Returns management: view requests, approve/reject with reason, mark received, confirm inspection
+- Refunds: start pending refunds through Paystack (with retry on failure), or record a manual MoMo refund for orders paid by MoMo
+- Notifications: in-dashboard list of new orders, return requests, delivery failures, refunds waiting to be started, failed refunds and payment problems, markable as read
+- Sales dashboard: total orders, revenue (net of refunds) over a chosen date range, orders by status, and counts of low-stock items and pending returns/refunds
 
 ### 5.3 Backend / infrastructure
 - All of the above backed by a documented REST API (see API Specification)

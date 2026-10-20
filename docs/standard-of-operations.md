@@ -67,17 +67,17 @@ Commit messages should describe *what* changed, not narrate the debugging proces
 
 ## 4. Testing Requirements
 
-Automated tests are **required** going forward — manual Postman testing (as used to validate the initial backend build) is no longer sufficient as the sole verification method for new work.
+Automated tests are **required** for all work. Manual Postman testing is fine while developing, but it is never the only check.
 
 ### 4.1 What needs tests
 
 - **Every new API route** — at minimum: the happy path, the primary error case(s) (auth failure, validation failure, not-found), and any business-rule edge case specific to that route (e.g. insufficient stock, return outside the 14-day window).
-- **Any transaction-wrapped logic** (checkout, cancellation with inventory restoration, refund triggering) — must include a test that verifies rollback behavior on failure, not just the success path. This is directly informed by how the original checkout transaction was validated during manual testing (deliberately triggering insufficient-stock failures and confirming inventory/cart were untouched) — that same rigor should exist as an automated test, not rely on someone remembering to re-check it by hand.
+- **Any transaction-wrapped logic** (checkout, cancellation with inventory restoration, refund triggering) — must include a test that verifies rollback behavior on failure, not just the success path. For example, deliberately trigger an insufficient-stock failure at checkout and confirm stock and cart are untouched. This must be an automated test, not something someone remembers to re-check by hand.
 - **Webhook handlers** (Paystack) — must include a test for idempotency (the same event delivered twice should not double-process).
 
 ### 4.2 What doesn't strictly need tests
 
-- Simple CRUD reads with no business logic (e.g. `GET /api/categories`) can be lower priority for dedicated tests, though still covered incidentally by integration tests of the flows that depend on them.
+- Simple CRUD reads with no business logic (e.g. `GET /api/v1/categories`) can be lower priority for dedicated tests, though still covered incidentally by integration tests of the flows that depend on them.
 
 ### 4.3 CI enforcement
 
@@ -110,7 +110,7 @@ components/
 
 ## 6. Environment Variables & Secrets — Checklist
 
-Directly informed by real friction hit during this project (stale/missing Vercel env vars causing production 500s, `pnpm-lock.yaml` sync issues, confusion between `packages/db/.env` and `apps/web/.env.local` being separate files read by separate processes). Follow this checklist whenever adding or changing an environment variable:
+Common traps this checklist prevents: missing or stale Vercel env vars causing production 500s, lockfile conflicts, and forgetting that `packages/db/.env` and `apps/web/.env.local` are separate files read by separate processes. Follow it whenever adding or changing an environment variable:
 
 1. **Identify which process needs it.** `packages/db/.env` is read only by `drizzle-kit` commands run from that folder. `apps/web/.env.local` is read by the running Next.js app. A variable needed by both (e.g. `DATABASE_URL`) must be added to **both files**, independently — one does not inherit from the other.
 2. **Add it locally first**, confirm the app/command actually works with it before touching anything else.
@@ -124,8 +124,8 @@ Directly informed by real friction hit during this project (stale/missing Vercel
 
 ## 7. Coding Constraints
 
-- **TypeScript strict mode** — no implicit `any`, consistent with what's already configured in `packages/config`.
-- **Zod for all request body validation** on API routes — this is already the established pattern (used in the product, inventory, and order-status admin routes) and should be followed for every new route, not just admin ones.
-- **Every DB write that touches money or inventory must be wrapped in a transaction** if it involves more than one table write — this is a hard rule, not a suggestion, given that the original checkout logic bug (missing inventory check) and the transaction-rollback behavior were both central to this project's correctness.
+- **TypeScript strict mode** — no implicit `any`, configured once in `packages/config`.
+- **Zod for all request body validation** on every API route, customer and admin alike.
+- **Every DB write that touches money or inventory must be wrapped in a transaction** if it involves more than one table write — a hard rule, not a suggestion. Checkout, cancellation, payment confirmation and refunds all depend on it.
 - **No raw SQL string concatenation** — all queries go through Drizzle's query builder, which parameterizes inputs and avoids SQL injection risk by construction.
-- **Rate limiting check is the first operation in any new write-heavy or auth-adjacent route**, before any DB reads — matches the established pattern in the existing orders/admin routes.
+- **Rate limiting check is the first operation in any new write-heavy or auth-adjacent route**, before any DB reads.
